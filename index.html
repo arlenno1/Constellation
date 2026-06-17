@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constellation — A Queens Logic Puzzle</title>
+<style>
+  :root {
+    --void: #0a0e1a;
+    --void-deep: #050711;
+    --star: #f5f3ee;
+    --star-dim: #9aa3b8;
+    --gold: #e8c468;
+    --ember: #d4825f;
+    --line: rgba(245, 243, 238, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--void);
+    color: var(--star);
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Starfield */
+  #sky {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(ellipse at 50% -10%, #131a2e 0%, var(--void) 45%, var(--void-deep) 100%);
+  }
+
+  .star {
+    position: absolute;
+    background: var(--star);
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 0.9; }
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  section {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 100px 28px;
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+
+  .eyebrow {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 28px;
+    opacity: 0.85;
+  }
+
+  h1 {
+    font-size: clamp(48px, 10vw, 92px);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    margin-bottom: 22px;
+  }
+
+  .hero-sub {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 17px;
+    color: var(--star-dim);
+    max-width: 420px;
+    line-height: 1.6;
+    margin-bottom: 48px;
+  }
+
+  /* The signature element: a live mini constellation puzzle grid */
+  .grid-demo {
+    display: grid;
+    grid-template-columns: repeat(5, 44px);
+    grid-template-rows: repeat(5, 44px);
+    gap: 3px;
+    margin-bottom: 56px;
+  }
+
+  .cell {
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    position: relative;
+    transition: transform 0.3s ease;
+  }
+
+  .cell.crown { color: var(--gold); }
+  .cell.crown::after {
+    content: '';
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    filter: blur(4px);
+    opacity: 0.8;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    padding: 14px 30px;
+    border-radius: 30px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .btn-primary {
+    background: var(--star);
+    color: var(--void-deep);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--star);
+    border: 1px solid var(--line);
+  }
+
+  .btn:hover { transform: translateY(-2px); }
+
+  /* How to play */
+  .section-label {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+
+  h2 {
+    font-size: clamp(28px, 5vw, 38px);
+    font-weight: 400;
+    margin-bottom: 36px;
+    letter-spacing: 0.01em;
+  }
+
+  .rule {
+    display: flex;
+    gap: 20px;
+    padding: 24px 0;
+    border-top: 1px solid var(--line);
+    align-items: flex-start;
+  }
+
+  .rule:last-child { border-bottom: 1px solid var(--line); }
+
+  .rule-glyph {
+    font-size: 22px;
+    color: var(--gold);
+    width: 32px;
+    flex-shrink: 0;
+    text-align: center;
+    padding-top: 2px;
+  }
+
+  .rule-text {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--star-dim);
+  }
+
+  .rule-text strong {
+    color: var(--star);
+    font-weight: 500;
+  }
+
+  /* Features */
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .feature {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 24px;
+  }
+
+  .feature-title {
+    font-size: 19px;
+    margin-bottom: 10px;
+    color: var(--star);
+  }
+
+  .feature-desc {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--star-dim);
+  }
+
+  /* Footer CTA */
+  .footer-cta {
+    text-align: center;
+    padding-bottom: 140px;
+  }
+
+  .footer-cta h2 { margin-bottom: 18px; }
+
+  .footer-cta .hero-sub { margin: 0 auto 40px; }
+
+  footer {
+    text-align: center;
+    padding: 40px 28px 60px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: var(--star-dim);
+    opacity: 0.6;
+  }
+
+  @media (max-width: 600px) {
+    section { padding: 70px 22px; }
+    .grid-demo {
+      grid-template-columns: repeat(5, 13vw);
+      grid-template-rows: repeat(5, 13vw);
+    }
+    .features { grid-template-columns: 1fr; }
+    .cta-row { flex-direction: column; width: 100%; }
+    .btn { justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .star { animation: none !important; }
+  }
+
+  a:focus-visible, .btn:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+</style>
+</head>
+<body>
+
+<div id="sky"></div>
+
+<div class="content">
+
+  <section class="hero">
+    <div class="eyebrow">A Logic Puzzle Game</div>
+    <h1>Constellation</h1>
+    <p class="hero-sub">One crown in every row. One in every column. One in every region. No two touching. Map the sky, one careful placement at a time.</p>
+
+    <div class="grid-demo" id="demoGrid"></div>
+
+    <div class="cta-row">
+      <a href="https://play.google.com/store/apps/details?id=com.arlen.constellation" class="btn btn-primary">Get it on Google Play</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">How to Play</div>
+    <h2>Four rules. Infinite puzzles.</h2>
+
+    <div class="rule">
+      <div class="rule-glyph">★</div>
+      <div class="rule-text"><strong>One star per row.</strong> Every row of the grid holds exactly one.</div>
+    </div>
+    <div class="rule">
+      <div class="rule-glyph">★</div>
+      <div class="rule-text"><strong>One star per column.</strong> Same rule, turned sideways.</div>
+    </div>
+    <div class="rule">
+      <div class="rule-glyph">★</div>
+      <div class="rule-text"><strong>One star per region.</strong> Each coloured zone gets exactly one, wherever it lands.</div>
+    </div>
+    <div class="rule">
+      <div class="rule-glyph">★</div>
+      <div class="rule-text"><strong>No touching.</strong> Not edge to edge, not corner to corner. Stars keep their distance.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Inside the App</div>
+    <h2>Built for the daily habit.</h2>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-title">Daily Puzzle</div>
+        <div class="feature-desc">A new grid every day. Keep your streak alive.</div>
+      </div>
+      <div class="feature">
+        <div class="feature-title">Difficulty Levels</div>
+        <div class="feature-desc">Start small on a 5×5. Work up to grids that fight back.</div>
+      </div>
+      <div class="feature">
+        <div class="feature-title">Gentle Hints</div>
+        <div class="feature-desc">Stuck? A nudge toward the next forced placement, not the answer.</div>
+      </div>
+      <div class="feature">
+        <div class="feature-title">No Noise</div>
+        <div class="feature-desc">No timers screaming at you. No ads between moves. Just the grid.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="footer-cta">
+    <div class="section-label">Begin</div>
+    <h2>The sky is waiting to be solved.</h2>
+    <p class="hero-sub">Free to play. New puzzle every day.</p>
+    <div class="cta-row">
+      <a href="https://play.google.com/store/apps/details?id=com.arlen.constellation" class="btn btn-primary">Get it on Google Play</a>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Constellation &copy; 2026
+</footer>
+
+<script>
+  // Generate ambient starfield
+  const sky = document.getElementById('sky');
+  const starCount = window.innerWidth < 600 ? 60 : 120;
+  for (let i = 0; i < starCount; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2 + 0.5;
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.animation = `twinkle ${3 + Math.random() * 4}s ease-in-out infinite`;
+    s.style.animationDelay = (Math.random() * 4) + 's';
+    sky.appendChild(s);
+  }
+
+  // Mini solved 5x5 Queens-style demo grid (decorative, fixed solution)
+  const regionColors = [
+    'rgba(232,196,104,0.16)',
+    'rgba(212,130,95,0.16)',
+    'rgba(154,163,184,0.16)',
+    'rgba(245,243,238,0.10)',
+    'rgba(232,196,104,0.10)'
+  ];
+  // 5x5 region map (one of several valid 5-queens region layouts)
+  const regions = [
+    [0,0,1,1,1],
+    [0,0,1,2,1],
+    [0,3,3,2,1],
+    [3,3,4,2,2],
+    [3,3,4,4,4]
+  ];
+  // A valid solution: one crown per row/col/region, no adjacency
+  const crowns = [
+    [0,1],
+    [1,4],
+    [2,2],
+    [3,0],
+    [4,3]
+  ];
+
+  const demoGrid = document.getElementById('demoGrid');
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.background = regionColors[regions[r][c]];
+      const isCrown = crowns.some(([cr, cc]) => cr === r && cc === c);
+      if (isCrown) {
+        cell.classList.add('crown');
+        cell.textContent = '★';
+      }
+      demoGrid.appendChild(cell);
+    }
+  }
+</script>
+
+</body>
+</html>
